@@ -1,0 +1,29 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<h1>Preview Scrape for {{ source.name }}</h1>
+
+<p><strong>Detected Scrape Type:</strong> {{ scrape_type }}</p>
+
+<h2>Sample Scraped Articles:</h2>
+{% if articles %}
+    <ul>
+    {% for article in articles %}
+        <li>
+            <strong>{{ article.headline }}</strong><br>
+            <em>{{ article.summary }}</em><br>
+            <a href="{{ article.link }}" target="_blank">Link</a>
+        </li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>No articles could be found using this method.</p>
+{% endif %}
+
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="confirmed_scrape_type" value="{{ scrape_type }}">
+    <button type="submit" name="confirm" style="padding: 10px; background-color: #4CAF50; color: white; border: none; cursor: pointer;">Confirm and Save Settings</button>
+    <a href="{% url 'admin:news_source_changelist' %}" style="padding: 10px; margin-left: 10px; background-color: #f44336; color: white; text-decoration: none;">Cancel</a>
+</form>
+{% endblock %}

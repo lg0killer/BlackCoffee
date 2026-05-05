@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BlackCoffee | Daily News</title>
+    <style>
+        :root {
+            --bg-color: #f4ebd8;
+            --text-color: #1a1a1a;
+            --line-color: #2c2c2c;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Times New Roman', Times, serif;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.4;
+        }
+
+        .header {
+            text-align: center;
+            border-bottom: 4px double var(--line-color);
+            border-top: 4px double var(--line-color);
+            padding: 20px 0;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 4rem;
+            margin: 0;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .header p {
+            margin: 10px 0 0;
+            font-style: italic;
+            font-size: 1.2rem;
+        }
+
+        .newspaper-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+        }
+
+        .source-section {
+            border-right: 1px solid var(--line-color);
+            padding-right: 30px;
+        }
+
+        .source-section:last-child {
+            border-right: none;
+            padding-right: 0;
+        }
+
+        .source-title {
+            font-size: 2rem;
+            border-bottom: 2px solid var(--line-color);
+            padding-bottom: 10px;
+            margin-top: 0;
+            text-align: center;
+        }
+
+        .article {
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px dashed #ccc;
+        }
+
+        .article:last-child {
+            border-bottom: none;
+        }
+
+        .article h3 {
+            font-size: 1.5rem;
+            margin: 0 0 10px 0;
+            line-height: 1.2;
+        }
+
+        .article a {
+            color: var(--text-color);
+            text-decoration: none;
+        }
+
+        .article a:hover {
+            text-decoration: underline;
+        }
+
+        .article p {
+            font-size: 1.1rem;
+            margin: 0;
+            text-align: justify;
+        }
+
+        .date-meta {
+            font-size: 0.8rem;
+            font-style: italic;
+            color: #555;
+            display: block;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>BlackCoffee</h1>
+        <p>Your Morning Briefing &middot; {{ today|date:"l, F j, Y" }}</p>
+    </div>
+
+    <div class="newspaper-grid">
+        {% for source_name, articles in grouped_articles.items %}
+        <div class="source-section">
+            <h2 class="source-title">{{ source_name }}</h2>
+
+            {% for article in articles %}
+            <div class="article">
+                <h3><a href="{{ article.link }}" target="_blank" rel="noopener noreferrer">{{ article.headline }}</a></h3>
+                {% if article.summary %}
+                    <p>{{ article.summary|safe|truncatewords_html:40 }}</p>
+                {% endif %}
+                <span class="date-meta">
+                    {% if article.publish_date %}{{ article.publish_date|date:"g:i A" }}{% else %}{{ article.created_at|date:"g:i A" }}{% endif %}
+                </span>
+            </div>
+            {% endfor %}
+
+        </div>
+        {% empty %}
+        <div style="text-align: center; width: 100%;">
+            <p>No news gathered yet. Check back after the morning scrape, or add sources in the <a href="/admin">Admin Panel</a>.</p>
+        </div>
+        {% endfor %}
+    </div>
+
+</body>
+</html>
