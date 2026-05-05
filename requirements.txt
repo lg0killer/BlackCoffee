@@ -1,0 +1,11 @@
+Django>=5.0
+celery>=5.3
+redis>=5.0
+django-celery-results>=2.5
+django-celery-beat>=2.5
+requests>=2.31
+beautifulsoup4>=4.12
+feedparser>=6.0
+argostranslate>=1.9
+deep-translator>=1.11
+playwright>=1.42
