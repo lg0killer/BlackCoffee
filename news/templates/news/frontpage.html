@@ -42,33 +42,47 @@
         }
 
         .newspaper-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
         }
 
         .source-section {
-            border-right: 1px solid var(--line-color);
-            padding-right: 30px;
-        }
-
-        .source-section:last-child {
-            border-right: none;
             padding-right: 0;
         }
 
         .source-title {
-            font-size: 2rem;
+            font-size: 2.5rem;
             border-bottom: 2px solid var(--line-color);
             padding-bottom: 10px;
             margin-top: 0;
+            margin-bottom: 20px;
             text-align: center;
+        }
+
+        .masonry-container {
+            column-count: 3;
+            column-gap: 30px;
+        }
+
+        @media (max-width: 900px) {
+            .masonry-container {
+                column-count: 2;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .masonry-container {
+                column-count: 1;
+            }
         }
 
         .article {
             margin-bottom: 25px;
             padding-bottom: 15px;
-            border-bottom: 1px dashed #ccc;
+            break-inside: avoid;
+            page-break-inside: avoid;
+            -webkit-column-break-inside: avoid;
         }
 
         .article:last-child {
@@ -79,6 +93,10 @@
             font-size: 1.5rem;
             margin: 0 0 10px 0;
             line-height: 1.2;
+            text-align: justify;
+            hyphens: auto;
+            -webkit-hyphens: auto;
+            -ms-hyphens: auto;
         }
 
         .article a {
@@ -94,6 +112,9 @@
             font-size: 1.1rem;
             margin: 0;
             text-align: justify;
+            hyphens: auto;
+            -webkit-hyphens: auto;
+            -ms-hyphens: auto;
         }
 
         .date-meta {
@@ -117,17 +138,19 @@
         <div class="source-section">
             <h2 class="source-title">{{ source_name }}</h2>
 
-            {% for article in articles %}
-            <div class="article">
-                <h3><a href="{{ article.link }}" target="_blank" rel="noopener noreferrer">{{ article.headline }}</a></h3>
-                {% if article.summary %}
-                    <p>{{ article.summary|safe|truncatewords_html:40 }}</p>
-                {% endif %}
-                <span class="date-meta">
-                    {% if article.publish_date %}{{ article.publish_date|date:"g:i A" }}{% else %}{{ article.created_at|date:"g:i A" }}{% endif %}
-                </span>
+            <div class="masonry-container">
+                {% for article in articles %}
+                <div class="article">
+                    <h3><a href="{{ article.link }}" target="_blank" rel="noopener noreferrer">{{ article.headline }}</a></h3>
+                    {% if article.summary %}
+                        <p>{{ article.summary|safe|truncatewords_html:40 }}</p>
+                    {% endif %}
+                    <span class="date-meta">
+                        {% if article.publish_date %}{{ article.publish_date|date:"g:i A" }}{% else %}{{ article.created_at|date:"g:i A" }}{% endif %}
+                    </span>
+                </div>
+                {% endfor %}
             </div>
-            {% endfor %}
 
         </div>
         {% empty %}
