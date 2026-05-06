@@ -1,0 +1,63 @@
+{% extends "base/base.html" %}
+
+{% block title %}Manage Personal Sources - BlackCoffee{% endblock %}
+{% block header_subtitle %}Customize Your Feed{% endblock %}
+
+{% block extra_css %}
+    .preferences-list {
+        margin-top: 30px;
+    }
+
+    .preference-item {
+        background-color: #fbf5e9;
+        border: 1px solid var(--line-color);
+        padding: 15px;
+        margin-bottom: 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .delete-btn {
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        cursor: pointer;
+    }
+
+    .delete-btn:hover {
+        background-color: #c82333;
+    }
+{% endblock %}
+
+{% block content %}
+<div class="form-container" style="max-width: 600px;">
+    <h2>Add Personal Source</h2>
+    <p>Articles scraped from these sources will only appear on your feed.</p>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Add Source</button>
+    </form>
+
+    <div class="preferences-list">
+        <h3>Your Custom Sources</h3>
+        {% for source in sources %}
+            <div class="preference-item">
+                <div>
+                    <strong>Name:</strong> {{ source.name }} <br>
+                    <strong>URL:</strong> <a href="{{ source.url }}" target="_blank" style="color:var(--text-color)">{{ source.url|truncatechars:40 }}</a> <br>
+                    <strong>Type:</strong> {{ source.get_scrape_type_display }}
+                </div>
+                <form action="{% url 'delete_source' source.pk %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="delete-btn">Delete</button>
+                </form>
+            </div>
+        {% empty %}
+            <p>You have no personal sources set up yet.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

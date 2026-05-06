@@ -18,6 +18,8 @@ class TranslationSetting(models.Model):
         return f"Translation Setting ({self.get_engine_display()})"
 
 
+from django.contrib.auth.models import User
+
 class Source(models.Model):
     SCRAPE_TYPES = [
         ('auto', 'Auto-detect'),
@@ -25,6 +27,7 @@ class Source(models.Model):
         ('web', 'Web Scrape (Playwright)'),
     ]
 
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='personal_sources', null=True, blank=True, help_text="If blank, this is a global source for everyone.")
     name = models.CharField(max_length=200)
     url = models.URLField(unique=True)
     scrape_type = models.CharField(max_length=10, choices=SCRAPE_TYPES, default='auto')

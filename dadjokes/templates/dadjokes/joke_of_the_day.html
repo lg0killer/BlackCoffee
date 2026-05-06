@@ -1,0 +1,139 @@
+{% extends "base/base.html" %}
+
+{% block title %}Joke of the Day - BlackCoffee{% endblock %}
+{% block header_subtitle %}Your Daily Chuckle{% endblock %}
+
+{% block extra_css %}
+    .joke-container {
+        max-width: 800px;
+        margin: 0 auto;
+        text-align: center;
+        padding: 40px;
+        background-color: #fbf5e9;
+        border: 2px dashed var(--line-color);
+    }
+
+    .joke-text {
+        font-size: 2rem;
+        font-style: italic;
+        margin-bottom: 30px;
+    }
+
+    .joke-meta {
+        font-size: 1rem;
+        color: #555;
+        margin-bottom: 20px;
+    }
+
+    .rating-section {
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid var(--line-color);
+    }
+
+    .rate-btn {
+        background: none;
+        border: 1px solid var(--line-color);
+        padding: 10px 20px;
+        font-size: 1.2rem;
+        cursor: pointer;
+        margin: 0 10px;
+        border-radius: 5px;
+    }
+
+    .rate-btn.active-up {
+        background-color: #d4edda;
+        border-color: #28a745;
+    }
+
+    .rate-btn.active-down {
+        background-color: #f8d7da;
+        border-color: #dc3545;
+    }
+
+    .fallback-alert {
+        background-color: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeeba;
+        padding: 10px;
+        margin-bottom: 20px;
+        border-radius: 5px;
+    }
+{% endblock %}
+
+{% block content %}
+<div class="joke-container">
+    {% if is_fallback %}
+    <div class="fallback-alert">
+        <strong>Information:</strong> We couldn't find a new joke for today, so here's a classic from our archives!
+    </div>
+    {% endif %}
+
+    {% if joke %}
+        <div class="joke-text">
+            "{{ joke.content }}"
+        </div>
+
+        <div class="joke-meta">
+            <p>Viewed {{ view_count }} time(s) by registered users.</p>
+        </div>
+
+        {% if user.is_authenticated %}
+            <div class="rating-section">
+                <p>What did you think of this joke?</p>
+                <button class="rate-btn {% if user_rating == 'up' %}active-up{% endif %}" onclick="rateJoke('up')">
+                    👍 <span id="upvotes-count">{{ upvotes }}</span>
+                </button>
+                <button class="rate-btn {% if user_rating == 'down' %}active-down{% endif %}" onclick="rateJoke('down')">
+                    👎 <span id="downvotes-count">{{ downvotes }}</span>
+                </button>
+            </div>
+
+            <script>
+                function rateJoke(rating) {
+                    const currentRating = document.querySelector('.rate-btn.active-' + rating);
+                    const action = currentRating ? 'none' : rating;
+
+                    fetch("{% url 'rate_joke' joke.id %}", {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-CSRFToken': '{{ csrf_token }}'
+                        },
+                        body: 'rating=' + action
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if(data.status === 'success') {
+                            document.getElementById('upvotes-count').innerText = data.upvotes;
+                            document.getElementById('downvotes-count').innerText = data.downvotes;
+
+                            // Reset buttons
+                            document.querySelectorAll('.rate-btn').forEach(btn => {
+                                btn.classList.remove('active-up');
+                                btn.classList.remove('active-down');
+                            });
+
+                            // Set active if not none
+                            if(action === 'up') {
+                                document.querySelectorAll('.rate-btn')[0].classList.add('active-up');
+                            } else if(action === 'down') {
+                                document.querySelectorAll('.rate-btn')[1].classList.add('active-down');
+                            }
+                        }
+                    });
+                }
+            </script>
+        {% else %}
+            <div class="rating-section">
+                <p><a href="{% url 'login' %}">Log in</a> to rate this joke and see past jokes!</p>
+                <p>👍 {{ upvotes }} | 👎 {{ downvotes }}</p>
+            </div>
+        {% endif %}
+    {% else %}
+        <div class="joke-text">
+            No jokes available yet. Check back later!
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends "base/base.html" %}
+
+{% block title %}Profile - BlackCoffee{% endblock %}
+{% block header_subtitle %}Manage Your Preferences{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h2>Your Profile</h2>
+    <form method="post">
+        {% csrf_token %}
+        <h3>User Info</h3>
+        {{ user_form.as_p }}
+
+        <h3>Preferences</h3>
+        {{ profile_form.as_p }}
+
+        <button type="submit">Save Changes</button>
+    </form>
+</div>
+{% endblock %}

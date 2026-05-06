@@ -9,3 +9,4 @@ feedparser>=6.0
 argostranslate>=1.9
 deep-translator>=1.11
 playwright>=1.42
+pytz
