@@ -32,10 +32,11 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
-    'news',
-    'accounts',
-    'dadjokes',
-    'notifications',
+    'apps.news',
+    'apps.accounts',
+    'apps.dadjokes',
+    'apps.notifications',
+    'apps.frontend',
     'django_celery_results',
     'django_celery_beat',
     "django.contrib.admin",

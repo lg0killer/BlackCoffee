@@ -1,10 +1,44 @@
 from django.shortcuts import render, get_object_or_404
 from django.utils import timezone
-from django.http import JsonResponse
+from django.db import models
 from django.contrib.auth.decorators import login_required
-from django.views.decorators.http import require_POST
 from django.core.paginator import Paginator
-from .models import Joke, JokeView, JokeRating
+import datetime
+
+from apps.news.models import Article, Source
+from apps.dadjokes.models import Joke, JokeView, JokeRating
+
+
+def newspaper_frontpage(request):
+    # Fetch articles from the last 48 hours for the newspaper view
+    recent_time = timezone.now() - datetime.timedelta(hours=48)
+
+    # Filter sources: Global sources (user=None) OR personal sources (user=request.user)
+    if request.user.is_authenticated:
+        allowed_sources = Source.objects.filter(models.Q(user__isnull=True) | models.Q(user=request.user))
+    else:
+        allowed_sources = Source.objects.filter(user__isnull=True)
+
+    articles = Article.objects.filter(source__in=allowed_sources, publish_date__gte=recent_time).order_by('-publish_date')
+
+    if not articles.exists():
+        # Fallback if publish_date is null or no recent articles
+        articles = Article.objects.filter(source__in=allowed_sources).order_by('-created_at')[:50]
+
+    # Group by source for columns/sections
+    grouped_articles = {}
+    for article in articles:
+        source_name = article.source.name
+        if source_name not in grouped_articles:
+            grouped_articles[source_name] = []
+        grouped_articles[source_name].append(article)
+
+    context = {
+        'grouped_articles': grouped_articles,
+        'today': timezone.now()
+    }
+    return render(request, 'news/frontpage.html', context)
+
 
 def joke_of_the_day(request):
     today = timezone.now().date()
@@ -48,6 +82,7 @@ def joke_of_the_day(request):
         'downvotes': downvotes
     })
 
+
 @login_required
 def previous_jokes(request):
     per_page = int(request.GET.get('per_page', 10))
@@ -63,28 +98,4 @@ def previous_jokes(request):
     return render(request, 'dadjokes/previous_jokes.html', {
         'page_obj': page_obj,
         'per_page': per_page
-    })
-
-@login_required
-@require_POST
-def rate_joke(request, joke_id):
-    joke = get_object_or_404(Joke, id=joke_id)
-    rating_type = request.POST.get('rating') # 'up', 'down', or 'none' (unlike)
-
-    if rating_type == 'none':
-        JokeRating.objects.filter(user=request.user, joke=joke).delete()
-    elif rating_type in ['up', 'down']:
-        is_thumbs_up = rating_type == 'up'
-        obj, created = JokeRating.objects.update_or_create(
-            user=request.user, joke=joke,
-            defaults={'is_thumbs_up': is_thumbs_up}
-        )
-
-    upvotes = joke.ratings.filter(is_thumbs_up=True).count()
-    downvotes = joke.ratings.filter(is_thumbs_up=False).count()
-
-    return JsonResponse({
-        'status': 'success',
-        'upvotes': upvotes,
-        'downvotes': downvotes
     })
