@@ -33,6 +33,9 @@ ALLOWED_HOSTS = []
 
 INSTALLED_APPS = [
     'news',
+    'accounts',
+    'dadjokes',
+    'notifications',
     'django_celery_results',
     'django_celery_beat',
     "django.contrib.admin",
@@ -58,7 +61,7 @@ ROOT_URLCONF = "blackcoffee.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR / 'templates'],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -120,6 +123,9 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 
+LOGIN_REDIRECT_URL = 'home'
+LOGOUT_REDIRECT_URL = 'home'
+
 # Celery Configuration Options
 CELERY_BROKER_URL = 'redis://valkey:6379/0' # We will use the service name 'valkey' in docker-compose
 CELERY_RESULT_BACKEND = 'django-db' # Use Django DB for results or simple usage
@@ -127,3 +133,4 @@ CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

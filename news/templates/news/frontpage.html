@@ -1,46 +1,9 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BlackCoffee | Daily News</title>
-    <style>
-        :root {
-            --bg-color: #f4ebd8;
-            --text-color: #1a1a1a;
-            --line-color: #2c2c2c;
-        }
+{% extends "base/base.html" %}
 
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            font-family: 'Times New Roman', Times, serif;
-            margin: 0;
-            padding: 20px;
-            line-height: 1.4;
-        }
+{% block title %}BlackCoffee | Daily News{% endblock %}
+{% block header_subtitle %}Your Morning Briefing &middot; {{ today|date:"l, F j, Y" }}{% endblock %}
 
-        .header {
-            text-align: center;
-            border-bottom: 4px double var(--line-color);
-            border-top: 4px double var(--line-color);
-            padding: 20px 0;
-            margin-bottom: 30px;
-        }
-
-        .header h1 {
-            font-size: 4rem;
-            margin: 0;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-
-        .header p {
-            margin: 10px 0 0;
-            font-style: italic;
-            font-size: 1.2rem;
-        }
-
+{% block extra_css %}
         .newspaper-grid {
             display: flex;
             flex-direction: column;
@@ -124,15 +87,9 @@
             display: block;
             margin-top: 5px;
         }
-    </style>
-</head>
-<body>
+{% endblock %}
 
-    <div class="header">
-        <h1>BlackCoffee</h1>
-        <p>Your Morning Briefing &middot; {{ today|date:"l, F j, Y" }}</p>
-    </div>
-
+{% block content %}
     <div class="newspaper-grid">
         {% for source_name, articles in grouped_articles.items %}
         <div class="source-section">
@@ -159,6 +116,4 @@
         </div>
         {% endfor %}
     </div>
-
-</body>
-</html>
+{% endblock %}

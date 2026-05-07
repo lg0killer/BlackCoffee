@@ -1,0 +1,102 @@
+{% extends "base/base.html" %}
+
+{% block title %}Past Jokes - BlackCoffee{% endblock %}
+{% block header_subtitle %}The Archives of Humor{% endblock %}
+
+{% block extra_css %}
+    .jokes-list {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    .joke-item {
+        background-color: #fbf5e9;
+        border: 1px solid var(--line-color);
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+
+    .joke-item-text {
+        font-size: 1.5rem;
+        font-style: italic;
+        margin-bottom: 10px;
+    }
+
+    .joke-item-meta {
+        font-size: 0.9rem;
+        color: #666;
+        border-top: 1px dashed #ccc;
+        padding-top: 10px;
+    }
+
+    .pagination {
+        text-align: center;
+        margin-top: 30px;
+        font-size: 1.2rem;
+    }
+
+    .pagination a {
+        text-decoration: none;
+        color: var(--text-color);
+        padding: 5px 10px;
+        border: 1px solid var(--line-color);
+        margin: 0 5px;
+    }
+
+    .pagination .current {
+        background-color: var(--text-color);
+        color: var(--bg-color);
+        padding: 5px 10px;
+        border: 1px solid var(--line-color);
+        margin: 0 5px;
+    }
+
+    .per-page-selector {
+        text-align: right;
+        margin-bottom: 20px;
+        max-width: 800px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+{% endblock %}
+
+{% block content %}
+<div class="per-page-selector">
+    Show:
+    <a href="?per_page=10" {% if per_page == 10 %}style="font-weight:bold"{% endif %}>10</a> |
+    <a href="?per_page=20" {% if per_page == 20 %}style="font-weight:bold"{% endif %}>20</a> |
+    <a href="?per_page=50" {% if per_page == 50 %}style="font-weight:bold"{% endif %}>50</a>
+</div>
+
+<div class="jokes-list">
+    {% for joke in page_obj %}
+        <div class="joke-item">
+            <div class="joke-item-text">"{{ joke.content }}"</div>
+            <div class="joke-item-meta">
+                First Used: {{ joke.date_used|date:"F j, Y" }} |
+                Views: {{ joke.views.count }}
+            </div>
+        </div>
+    {% empty %}
+        <p style="text-align:center;">No past jokes to display.</p>
+    {% endfor %}
+</div>
+
+<div class="pagination">
+    <span class="step-links">
+        {% if page_obj.has_previous %}
+            <a href="?page=1&per_page={{ per_page }}">&laquo; first</a>
+            <a href="?page={{ page_obj.previous_page_number }}&per_page={{ per_page }}">previous</a>
+        {% endif %}
+
+        <span class="current">
+            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
+        </span>
+
+        {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}&per_page={{ per_page }}">next</a>
+            <a href="?page={{ page_obj.paginator.num_pages }}&per_page={{ per_page }}">last &raquo;</a>
+        {% endif %}
+    </span>
+</div>
+{% endblock %}
