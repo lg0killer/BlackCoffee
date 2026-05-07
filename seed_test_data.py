@@ -4,9 +4,9 @@ import django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'blackcoffee.settings')
 django.setup()
 
-from news.models import Source, Category
-from news.tasks import run_rss_scraper
-from news.utils import detect_rss_feed
+from apps.news.models import Source, Category
+from apps.news.tasks import run_rss_scraper
+from apps.news.utils import detect_rss_feed
 
 def main():
     print("Setting up test data for BleepingComputer...")
@@ -34,7 +34,7 @@ def main():
     print(f"Running RSS scraper for {source.name}...")
     run_rss_scraper(source.id)
 
-    from news.models import Article
+    from apps.news.models import Article
     count = Article.objects.filter(source=source).count()
     print(f"Success! Database now has {count} articles from {source.name}.")
 
