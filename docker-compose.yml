@@ -6,10 +6,10 @@ services:
     volumes:
       - .:/app
     ports:
-      - "8000:8000"
+      - "8001:8000"
     depends_on:
       - valkey
-      - db
+      # - db
     environment:
       - CELERY_BROKER_URL=redis://valkey:6379/0
 
@@ -20,7 +20,7 @@ services:
       - .:/app
     depends_on:
       - valkey
-      - db
+      # - db
       - web
     environment:
       - CELERY_BROKER_URL=redis://valkey:6379/0
@@ -32,19 +32,19 @@ services:
       - .:/app
     depends_on:
       - valkey
-      - db
+      # - db
       - web
     environment:
       - CELERY_BROKER_URL=redis://valkey:6379/0
 
   valkey:
     image: valkey/valkey:7.2
-    ports:
-      - "6379:6379"
+    # ports:
+    #   - "6379:6379"
 
-  db:
-    # We are using sqlite which is a file in the workspace,
-    # but a dummy service can be kept here if you switch to Postgres.
-    # For now, it's just an empty anchor so depends_on doesn't fail.
-    image: busybox
-    command: sleep infinity
+  # db:
+  #   # We are using sqlite which is a file in the workspace,
+  #   # but a dummy service can be kept here if you switch to Postgres.
+  #   # For now, it's just an empty anchor so depends_on doesn't fail.
+  #   image: busybox
+  #   command: sleep infinity
