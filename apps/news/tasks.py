@@ -1,3 +1,5 @@
+import logging
+import traceback
 from celery import shared_task
 from .models import Source, Category, Article, ScrapeState
 from .utils import detect_rss_feed, translate_text
@@ -6,40 +8,59 @@ from playwright.sync_api import sync_playwright
 import datetime
 from django.utils import timezone
 
+logger = logging.getLogger(__name__)
+
+
 @shared_task
 def test_scrape_task(source_id):
     """
-    Background task to test/detect scrape type for a newly added source.
+    Background task to detect scrape type for a source and then run the appropriate scraper.
     """
     try:
         source = Source.objects.get(id=source_id)
+        logger.info("[test_scrape] Starting for source '%s' (id=%s, current type=%s)", source.name, source_id, source.scrape_type)
         if source.scrape_type == 'auto':
             feed_url = detect_rss_feed(source.url)
             if feed_url:
                 source.scrape_type = 'rss'
-                # Optionally save the actual feed url if we want, but for now we keep the base
-                # and logic handles it. Let's update URL if it's vastly different or we can assume it.
                 source.url = feed_url
                 source.save()
+                logger.info("[test_scrape] Detected RSS feed for '%s': %s", source.name, feed_url)
             else:
                 source.scrape_type = 'web'
                 source.save()
+                logger.info("[test_scrape] No RSS feed found for '%s', using web scraper", source.name)
+        # Now run the appropriate scraper
+        if source.scrape_type == 'rss':
+            logger.info("[test_scrape] Dispatching run_rss_scraper for '%s'", source.name)
+            run_rss_scraper.delay(source_id)
+        elif source.scrape_type == 'web':
+            logger.info("[test_scrape] Dispatching run_web_scraper for '%s'", source.name)
+            run_web_scraper.delay(source_id)
     except Exception as e:
-        print(f"Error in test_scrape_task: {e}")
+        logger.error("[test_scrape] Error for source_id=%s: %s\n%s", source_id, e, traceback.format_exc())
+
 
 @shared_task
 def run_rss_scraper(source_id):
     source = Source.objects.get(id=source_id)
+    logger.info("[rss] Starting scrape for '%s' (%s)", source.name, source.url)
+
     feed = feedparser.parse(source.url)
+    logger.info("[rss] Feed fetched for '%s': %d entries, bozo=%s", source.name, len(feed.entries), feed.get('bozo'))
+    if feed.get('bozo'):
+        logger.warning("[rss] Feed parse warning for '%s': %s", source.name, feed.get('bozo_exception'))
 
     state, created = ScrapeState.objects.get_or_create(source=source)
     state.last_run = timezone.now()
 
     try:
         articles_created = 0
+        skipped = 0
         for entry in feed.entries:
             link = entry.link
             if Article.objects.filter(link=link).exists():
+                skipped += 1
                 continue
 
             headline = entry.get('title', 'No Title')
@@ -47,6 +68,7 @@ def run_rss_scraper(source_id):
 
             # Apply Translation if needed
             if source.should_translate and source.source_language:
+                logger.debug("[rss] Translating article '%s'", headline[:60])
                 headline = translate_text(headline, source.source_language, source.target_language)
                 summary = translate_text(summary, source.source_language, source.target_language)
 
@@ -63,59 +85,70 @@ def run_rss_scraper(source_id):
                 publish_date=pub_date
             )
             articles_created += 1
+            logger.debug("[rss] Created article: %s", headline[:80])
 
+        logger.info("[rss] Done for '%s': %d created, %d skipped (already exist)", source.name, articles_created, skipped)
         state.last_status = f"Success. Added {articles_created} articles."
         state.last_error = ""
     except Exception as e:
+        logger.error("[rss] Error scraping '%s': %s\n%s", source.name, e, traceback.format_exc())
         state.last_status = "Error"
         state.last_error = str(e)
 
     state.save()
+    return state.last_status
+
 
 @shared_task
 def run_web_scraper(source_id):
     source = Source.objects.get(id=source_id)
+    logger.info("[web] Starting scrape for '%s' (%s)", source.name, source.url)
+
     state, created = ScrapeState.objects.get_or_create(source=source)
     state.last_run = timezone.now()
 
     try:
         articles_created = 0
+        scraped_items = []
+
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             page = browser.new_page()
 
-            # Simple heuristic Web Scrape
+            logger.info("[web] Navigating to %s", source.url)
             page.goto(source.url, timeout=60000)
 
             if source.requires_login and source.username and source.password:
-                # Naive login attempt (fill first username/password fields)
+                logger.info("[web] Attempting login for '%s'", source.name)
                 page.fill('input[type="text"], input[name="username"], input[name="email"]', source.username)
                 page.fill('input[type="password"]', source.password)
                 page.click('button[type="submit"], input[type="submit"]')
-                page.wait_for_timeout(3000) # Wait for navigation
+                page.wait_for_timeout(3000)
+                logger.info("[web] Login submitted for '%s'", source.name)
 
-            # Attempt to discover and save Category links
+            # Collect category nav links
             nav_links = page.locator('nav a, header a').all()
-            for nav in nav_links[:10]: # Look at first 10 nav links for categories
+            logger.debug("[web] Found %d nav links for '%s'", len(nav_links), source.name)
+            category_names = []
+            for nav in nav_links[:10]:
                 nav_text = nav.inner_text().strip()
                 try:
                     nav_href = nav.get_attribute('href')
                     if nav_text and len(nav_text) < 20 and nav_href:
-                        Category.objects.get_or_create(name=nav_text)
+                        category_names.append(nav_text)
                 except:
                     pass
 
-            # Extract links and headings roughly
+            # Collect article data without touching the DB
             items = page.locator('article, .article, .post, h2, h3').all()
-            for item in items[:20]: # Limit to 20 for generic scrape
+            logger.info("[web] Found %d candidate items for '%s'", len(items), source.name)
+            for item in items[:20]:
                 text = item.inner_text().strip()
                 if not text:
                     continue
-
-                # Try to find a link nearby
-                link_loc = item.locator('a').first
                 link = source.url
                 try:
+                    link_loc = item.locator('a').first
                     if link_loc.count() > 0:
                         href = link_loc.get_attribute('href')
                         if href:
@@ -126,86 +159,83 @@ def run_web_scraper(source_id):
                                 link = href
                 except:
                     pass
-
-                # Check exists
-                if Article.objects.filter(headline=text).exists() or Article.objects.filter(link=link).exists():
-                    continue
-
-                headline = text
-                summary = "Automatically scraped from web source."
-
-                # Translate
-                if source.should_translate and source.source_language:
-                    headline = translate_text(headline, source.source_language, source.target_language)
-                    summary = translate_text(summary, source.source_language, source.target_language)
-
-                Article.objects.create(
-                    source=source,
-                    headline=headline,
-                    summary=summary,
-                    link=link,
-                    publish_date=timezone.now()
-                )
-                articles_created += 1
+                scraped_items.append({'headline': text, 'link': link})
 
             browser.close()
 
+        # All DB work happens after Playwright has fully exited
+        for name in category_names:
+            Category.objects.get_or_create(name=name)
+
+        skipped = 0
+        for item in scraped_items:
+            text = item['headline']
+            link = item['link']
+
+            if Article.objects.filter(headline=text).exists() or Article.objects.filter(link=link).exists():
+                skipped += 1
+                continue
+
+            headline = text
+            summary = "Automatically scraped from web source."
+
+            if source.should_translate and source.source_language:
+                logger.debug("[web] Translating article '%s'", headline[:60])
+                headline = translate_text(headline, source.source_language, source.target_language)
+                summary = translate_text(summary, source.source_language, source.target_language)
+
+            Article.objects.create(
+                source=source,
+                headline=headline,
+                summary=summary,
+                link=link,
+                publish_date=timezone.now()
+            )
+            articles_created += 1
+            logger.debug("[web] Created article: %s", headline[:80])
+
+        logger.info("[web] Done for '%s': %d created, %d skipped", source.name, articles_created, skipped)
         state.last_status = f"Success. Added {articles_created} articles."
         state.last_error = ""
     except Exception as e:
+        logger.error("[web] Error scraping '%s': %s\n%s", source.name, e, traceback.format_exc())
         state.last_status = "Error"
         state.last_error = str(e)
 
     state.save()
+    return state.last_status
+
 
 @shared_task
 def run_all_scrapers():
     """
     Main entrypoint for daily scheduled scrapers.
     """
-    for source in Source.objects.all():
+    sources = list(Source.objects.all())
+    logger.info("[run_all] Dispatching scrapers for %d sources", len(sources))
+    for source in sources:
         if source.scrape_type == 'rss':
             run_rss_scraper.delay(source.id)
         elif source.scrape_type == 'web':
             run_web_scraper.delay(source.id)
         elif source.scrape_type == 'auto':
-            # Run detect first, then it will set it to RSS or Web.
             test_scrape_task.delay(source.id)
+        logger.info("[run_all] Queued scrape for '%s' (type=%s)", source.name, source.scrape_type)
+
 
 @shared_task
 def catchup_scrapers():
     """
-    Runs frequently (e.g., every 15 mins). Checks if the main daily run
-    should have happened but the laptop was off/sleeping.
-
-    Logic: We want to run scrapers at 03:00 and 05:00 UTC.
-    If the current time is past those times, but the last run was before those times today,
-    we trigger a catchup run.
+    Runs every 15 minutes. Triggers scraper if no run has occurred in the last 15 minutes.
     """
     now = timezone.now()
-    today = now.date()
+    cutoff = now - datetime.timedelta(minutes=15)
 
-    target_times = [
-        datetime.time(3, 0),
-        datetime.time(5, 0)
-    ]
-
-    # Check the latest scrape state generally. If no state exists, run it.
     latest_state = ScrapeState.objects.order_by('-last_run').first()
     last_run_time = latest_state.last_run if latest_state and latest_state.last_run else None
 
-    should_run = False
-
-    if not last_run_time:
-        should_run = True
-    else:
-        for t in target_times:
-            target_dt = timezone.make_aware(datetime.datetime.combine(today, t))
-            # If we are currently PAST the target time, BUT the last run was BEFORE the target time.
-            if now >= target_dt and last_run_time < target_dt:
-                should_run = True
-                break
-
-    if should_run:
-        print(f"Catch-up logic triggered at {now}")
+    if not last_run_time or last_run_time < cutoff:
+        logger.info("[catchup] Triggering run_all_scrapers at %s (last run: %s)", now, last_run_time)
         run_all_scrapers.delay()
+    else:
+        logger.debug("[catchup] Skipping — last run was %s, cutoff is %s", last_run_time, cutoff)
