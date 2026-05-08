@@ -4,6 +4,7 @@ from django.http import HttpResponseRedirect
 from django.shortcuts import render
 from django.contrib import messages
 from .models import Source, Category, Article, ScrapeState, TranslationSetting
+from .tasks import run_rss_scraper, run_web_scraper, run_all_scrapers, test_scrape_task
 
 @admin.register(TranslationSetting)
 class TranslationSettingAdmin(admin.ModelAdmin):
@@ -19,15 +20,35 @@ class SourceAdmin(admin.ModelAdmin):
     list_display = ('name', 'url', 'scrape_type', 'requires_login', 'should_translate')
     list_filter = ('scrape_type', 'requires_login', 'should_translate')
     search_fields = ('name', 'url')
+    actions = ['scrape_selected_sources']
 
     change_form_template = "admin/news/source/change_form.html"
+    change_list_template = "admin/news/source/change_list.html"
 
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
+            path('run_all/', self.admin_site.admin_view(self.run_all), name='news_source_run_all'),
             path('<int:source_id>/test_scrape/', self.admin_site.admin_view(self.test_scrape), name='news_source_test_scrape'),
         ]
         return custom_urls + urls
+
+    def run_all(self, request):
+        run_all_scrapers.delay()
+        messages.success(request, "Scrape All Sources task has been queued.")
+        return HttpResponseRedirect("../")
+
+    def scrape_selected_sources(self, request, queryset):
+        count = queryset.count()
+        for source in queryset:
+            if source.scrape_type == 'rss':
+                run_rss_scraper.delay(source.id)
+            elif source.scrape_type == 'web':
+                run_web_scraper.delay(source.id)
+            else:
+                test_scrape_task.delay(source.id)
+        self.message_user(request, f"Scrape tasks queued for {count} source(s).")
+    scrape_selected_sources.short_description = "Scrape selected sources now"
 
     def test_scrape(self, request, source_id):
         source = self.get_object(request, source_id)
