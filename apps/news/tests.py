@@ -21,7 +21,7 @@ class NewsModelsTest(TestCase):
             link="http://example.com/article1",
             publish_date=timezone.now()
         )
-        self.setting = TranslationSetting.objects.create(engine="argos", is_active=True)
+        self.setting = TranslationSetting.objects.get_or_create(engine="argos", is_active=True)[0]
 
     def test_source_creation(self):
         self.assertEqual(self.source.name, "Test Source")
