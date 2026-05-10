@@ -1,6 +1,5 @@
 import requests
 from bs4 import BeautifulSoup
-from django.conf import settings
 import argostranslate.package
 import argostranslate.translate
 from deep_translator import GoogleTranslator
