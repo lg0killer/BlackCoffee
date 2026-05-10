@@ -57,9 +57,16 @@ def run_rss_scraper(source_id):
     try:
         articles_created = 0
         skipped = 0
+
+        # Optimization: Fetch all existing links in one query to avoid N+1
+        entry_links = [entry.link for entry in feed.entries if hasattr(entry, 'link')]
+        existing_links = set(
+            Article.objects.filter(link__in=entry_links).values_list('link', flat=True)
+        )
+
         for entry in feed.entries:
-            link = entry.link
-            if Article.objects.filter(link=link).exists():
+            link = getattr(entry, 'link', None)
+            if link in existing_links:
                 skipped += 1
                 continue
 
