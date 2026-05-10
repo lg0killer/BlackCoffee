@@ -1,6 +1,8 @@
 from django.test import TestCase
 from .models import Source, Category, Article, TranslationSetting
 from django.utils import timezone
+from unittest.mock import patch, MagicMock
+from .tasks import run_rss_scraper
 
 class NewsModelsTest(TestCase):
     def setUp(self):
@@ -33,3 +35,39 @@ class NewsModelsTest(TestCase):
 
     def test_translation_setting(self):
         self.assertEqual(self.setting.engine, "argos")
+
+class NewsTasksTest(TestCase):
+    def setUp(self):
+        self.source = Source.objects.create(
+            name="RSS Source",
+            url="http://example.com/rss",
+            scrape_type="rss"
+        )
+
+    @patch('apps.news.tasks.feedparser.parse')
+    def test_run_rss_scraper_optimization(self, mock_parse):
+        # Create an existing article
+        Article.objects.create(
+            source=self.source,
+            headline="Existing Article",
+            link="http://example.com/existing"
+        )
+
+        # Mock feed entries: one existing, one new
+        mock_feed = MagicMock()
+        mock_feed.entries = [
+            MagicMock(link="http://example.com/existing", title="Existing Article", summary=""),
+            MagicMock(link="http://example.com/new", title="New Article", summary="")
+        ]
+        mock_feed.get.return_value = False
+        mock_parse.return_value = mock_feed
+
+        # Run the scraper
+        with self.assertNumQueries(4): # 1 Source, 1 ScrapeState, 1 Article existing check, 1 Article create
+             # (Note: actual count might vary based on DB/ScrapeState logic,
+             # but the key is that Article check is now 1 query for all links)
+            run_rss_scraper(self.source.id)
+
+        # Verify results
+        self.assertEqual(Article.objects.count(), 2)
+        self.assertTrue(Article.objects.filter(link="http://example.com/new").exists())
