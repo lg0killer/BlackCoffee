@@ -4,7 +4,7 @@ services:
     build: .
     command: ./entrypoint.sh python manage.py runserver 0.0.0.0:8000
     volumes:
-      - .:/app
+      - app_volume:/app
     ports:
       - "8001:8000"
     depends_on:
@@ -12,30 +12,33 @@ services:
       # - db
     environment:
       - CELERY_BROKER_URL=redis://valkey:6379/0
+      - DEBUG=True
 
   worker:
     build: .
     command: celery -A blackcoffee worker -l info
     volumes:
-      - .:/app
+      - app_volume:/app
     depends_on:
       - valkey
       # - db
       - web
     environment:
       - CELERY_BROKER_URL=redis://valkey:6379/0
+      - DEBUG=True
 
   beat:
     build: .
     command: celery -A blackcoffee beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
     volumes:
-      - .:/app
+      - app_volume:/app
     depends_on:
       - valkey
       # - db
       - web
     environment:
       - CELERY_BROKER_URL=redis://valkey:6379/0
+      - DEBUG=True
 
   valkey:
     image: valkey/valkey:7.2
@@ -48,3 +51,6 @@ services:
   #   # For now, it's just an empty anchor so depends_on doesn't fail.
   #   image: busybox
   #   command: sleep infinity
+
+volumes:
+  app_volume:

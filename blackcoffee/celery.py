@@ -17,16 +17,6 @@ from celery.schedules import crontab
 # Load task modules from all registered Django apps.
 app.autodiscover_tasks()
 
-app.conf.beat_schedule = {
-    'fetch-joke-of-the-day-midnight-utc': {
-        'task': 'dadjokes.tasks.fetch_joke_of_the_day',
-        'schedule': crontab(minute=0, hour=0),  # Midnight UTC
-    },
-    'process-notifications-every-minute': {
-        'task': 'notifications.tasks.process_notifications',
-        'schedule': crontab(minute='*'),  # Every minute
-    },
-}
 
 @app.task(bind=True, ignore_result=True)
 def debug_task(self):
