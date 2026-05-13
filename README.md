@@ -84,3 +84,5 @@ python manage.py test
 ```
 
 Tests cover model creation and validation for `Source`, `Article`, `Category`, and `TranslationSetting`.
+## Security Notice: deep-translator
+The `deep-translator` dependency is locked to a version strictly less than `1.11.0` (e.g., `deep-translator<1.11.0`) due to a malicious takeover in version `1.11.4` (PYSEC-2022-252) that runs malware during installation. DO NOT upgrade to or past `1.11.4`.

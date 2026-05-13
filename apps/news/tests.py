@@ -58,14 +58,18 @@ class NewsTasksTest(TestCase):
         # Mock feed entries: one existing, one new
         mock_feed = MagicMock()
         mock_feed.entries = [
-            MagicMock(link="http://example.com/existing", title="Existing Article", summary=""),
-            MagicMock(link="http://example.com/new", title="New Article", summary="")
+            MagicMock(link="http://example.com/existing", title="Existing Article", summary="", published_parsed=(2026, 5, 13, 6, 20, 49)),
+            MagicMock(link="http://example.com/new", title="New Article", summary="", published_parsed=(2026, 5, 13, 6, 20, 49))
         ]
+
+        for entry in mock_feed.entries:
+            entry.get.side_effect = lambda key, default=None: getattr(entry, key, default)
+
         mock_feed.get.return_value = False
         mock_parse.return_value = mock_feed
 
         # Run the scraper
-        with self.assertNumQueries(4): # 1 Source, 1 ScrapeState, 1 Article existing check, 1 Article create
+        with self.assertNumQueries(8): # 1 Source, 1 ScrapeState, 1 ScrapeState insert, 1 Article existing check, 1 Article create, 1 ScrapeState update (+savepoints)
              # (Note: actual count might vary based on DB/ScrapeState logic,
              # but the key is that Article check is now 1 query for all links)
             run_rss_scraper(self.source.id)

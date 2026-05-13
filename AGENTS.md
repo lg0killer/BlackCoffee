@@ -159,3 +159,6 @@ Planned features are tracked in [FUTURE_FEATURES.md](FUTURE_FEATURES.md).
 - Migrations must be created manually with `manage.py makemigrations` after any model change — they are not auto-generated on startup.
 - `SECRET_KEY` defaults to an insecure dev key; set the `SECRET_KEY` environment variable in production.
 - `DEBUG = True` is hardcoded — not suitable for production as-is.
+
+### Security Notice: deep-translator
+The `deep-translator` dependency MUST be locked to a version strictly less than `1.11.0` (e.g., `deep-translator<1.11.0`). Version `1.11.4` is compromised by a malicious takeover (PYSEC-2022-252) that runs malware during installation. DO NOT upgrade to or past `1.11.4` unless migrating to an entirely different translation library.
