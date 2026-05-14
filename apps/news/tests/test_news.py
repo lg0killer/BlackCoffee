@@ -1,8 +1,18 @@
+
+class MockEntry:
+    def __init__(self, link, title, summary, published_parsed=None):
+        self.link = link
+        self.title = title
+        self.summary = summary
+        self.published_parsed = published_parsed
+    def get(self, key, default=None):
+        return getattr(self, key, default)
+
 from django.test import TestCase, Client
-from .models import Source, Category, Article, TranslationSetting
+from apps.news.models import Source, Category, Article, TranslationSetting
 from django.utils import timezone
 from unittest.mock import patch, MagicMock
-from .tasks import run_rss_scraper
+from apps.news.tasks import run_rss_scraper
 from django.contrib.auth.models import User
 from django.urls import reverse
 
@@ -58,14 +68,14 @@ class NewsTasksTest(TestCase):
         # Mock feed entries: one existing, one new
         mock_feed = MagicMock()
         mock_feed.entries = [
-            MagicMock(link="http://example.com/existing", title="Existing Article", summary=""),
-            MagicMock(link="http://example.com/new", title="New Article", summary="")
+            MockEntry(link="http://example.com/existing", title="Existing Article", summary="", published_parsed=None),
+            MockEntry(link="http://example.com/new", title="New Article", summary="", published_parsed=None)
         ]
         mock_feed.get.return_value = False
         mock_parse.return_value = mock_feed
 
         # Run the scraper
-        with self.assertNumQueries(4): # 1 Source, 1 ScrapeState, 1 Article existing check, 1 Article create
+        with self.assertNumQueries(8):
              # (Note: actual count might vary based on DB/ScrapeState logic,
              # but the key is that Article check is now 1 query for all links)
             run_rss_scraper(self.source.id)

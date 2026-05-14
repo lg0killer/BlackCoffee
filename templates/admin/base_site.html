@@ -1,0 +1,14 @@
+{% extends "admin/base.html" %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block branding %}
+<h1 id="site-name"><a href="{% url 'admin:index' %}">{{ site_header|default:_('Django administration') }}</a></h1>
+{% endblock %}
+
+{% block nav-global %}{% endblock %}
+
+{% block userlinks %}
+    <a href="{% url 'force_sync_all' %}" style="font-weight: bold; color: var(--button-bg, #79aec8); margin-right: 15px;" onclick="return confirm('Trigger force sync for all sources in the background?');">Force Sync All</a>
+    {{ block.super }}
+{% endblock %}
