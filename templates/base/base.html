@@ -65,6 +65,67 @@
             border-bottom: 1px solid var(--text-color);
         }
 
+        .user-dropdown-container {
+            display: inline-block;
+            position: relative;
+        }
+
+        .user-dropdown-toggle {
+            cursor: pointer;
+            border-bottom: 1px dashed var(--text-color);
+            padding-bottom: 2px;
+        }
+
+        .user-dropdown-menu {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 100%;
+            margin-top: 10px;
+            background-color: var(--bg-color);
+            border: 1px solid var(--line-color);
+            min-width: 150px;
+            z-index: 1000;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .user-dropdown-menu.show {
+            display: block;
+        }
+
+        .user-dropdown-menu a,
+        .user-dropdown-menu button {
+            display: block;
+            width: 100%;
+            text-align: left;
+            padding: 10px 15px;
+            box-sizing: border-box;
+            border: none;
+            border-bottom: 1px solid var(--line-color);
+            background: none;
+            color: var(--text-color);
+            font-family: inherit;
+            font-size: 1rem;
+            cursor: pointer;
+            text-decoration: none;
+            margin: 0;
+        }
+
+        .user-dropdown-menu a:last-child,
+        .user-dropdown-menu form:last-child button {
+            border-bottom: none;
+        }
+
+        .user-dropdown-menu a:hover,
+        .user-dropdown-menu button:hover {
+            background-color: #e8dcc3;
+            border-bottom: 1px solid var(--line-color);
+        }
+
+        .user-dropdown-menu form:last-child button:hover {
+            border-bottom: none;
+        }
+
         .form-container {
             max-width: 500px;
             margin: 0 auto;
@@ -138,12 +199,19 @@
     <div class="header">
         <div class="auth-links">
             {% if user.is_authenticated %}
-                <span>Welcome, {{ user.username }}</span>
-                <a href="{% url 'profile' %}">Profile</a>
-                <form action="{% url 'logout' %}" method="post" style="display:inline;">
-                    {% csrf_token %}
-                    <button type="submit" style="background:none; border:none; color:inherit; font-family:inherit; font-size:inherit; cursor:pointer; text-decoration:underline;">Logout</button>
-                </form>
+                <div class="user-dropdown-container">
+                    <span class="user-dropdown-toggle" id="userDropdownToggle" onclick="toggleDropdown()">Welcome, {{ user.username }} ▾</span>
+                    <div class="user-dropdown-menu" id="userDropdownMenu">
+                        <a href="{% url 'profile' %}">Profile</a>
+                        {% if user.is_staff %}
+                            <a href="/admin">Django Admin</a>
+                        {% endif %}
+                        <form action="{% url 'logout' %}" method="post">
+                            {% csrf_token %}
+                            <button type="submit">Logout</button>
+                        </form>
+                    </div>
+                </div>
             {% else %}
                 <a href="{% url 'login' %}">Login</a>
                 <a href="{% url 'signup' %}">Sign Up</a>
@@ -168,5 +236,23 @@
         {% endblock %}
     </div>
 
+    <script>
+        function toggleDropdown() {
+            document.getElementById("userDropdownMenu").classList.toggle("show");
+        }
+
+        // Close the dropdown if the user clicks outside of it
+        window.onclick = function(event) {
+            if (!event.target.matches('.user-dropdown-toggle')) {
+                var dropdowns = document.getElementsByClassName("user-dropdown-menu");
+                for (var i = 0; i < dropdowns.length; i++) {
+                    var openDropdown = dropdowns[i];
+                    if (openDropdown.classList.contains('show')) {
+                        openDropdown.classList.remove('show');
+                    }
+                }
+            }
+        }
+    </script>
 </body>
 </html>
