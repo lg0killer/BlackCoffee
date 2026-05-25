@@ -143,8 +143,8 @@ def run_web_scraper(source_id):
                     nav_href = nav.get_attribute('href')
                     if nav_text and len(nav_text) < 20 and nav_href:
                         category_names.append(nav_text)
-                except:
-                    pass
+                except Exception as e:
+                    logger.warning("[web] Error extracting nav link href: %s", e)
 
             # Collect article data without touching the DB
             items = page.locator('article, .article, .post, h2, h3').all()
@@ -164,8 +164,8 @@ def run_web_scraper(source_id):
                                 link = urljoin(source.url, href)
                             else:
                                 link = href
-                except:
-                    pass
+                except Exception as e:
+                    logger.warning("[web] Error extracting article link href: %s", e)
                 scraped_items.append({'headline': text, 'link': link})
 
             browser.close()
