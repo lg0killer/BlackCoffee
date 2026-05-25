@@ -1,9 +1,12 @@
+import logging
 import requests
 from bs4 import BeautifulSoup
 import argostranslate.package
 import argostranslate.translate
 from deep_translator import GoogleTranslator
 from .models import TranslationSetting
+
+logger = logging.getLogger(__name__)
 
 def detect_rss_feed(url):
     """
@@ -43,7 +46,7 @@ def detect_rss_feed(url):
                 pass
 
     except Exception as e:
-        print(f"Error detecting RSS for {url}: {e}")
+        logger.error(f"Error detecting RSS for {url}: {e}")
 
     return None
 
@@ -85,7 +88,7 @@ def translate_text(text, source_lang, target_lang='en'):
             return translator.translate(text)
 
     except Exception as e:
-        print(f"Translation error: {e}")
+        logger.error(f"Translation error: {e}")
         return text
 
     return text
